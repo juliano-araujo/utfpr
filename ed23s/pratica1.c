@@ -5,17 +5,10 @@
 
 #define TAMANHO_PILHA 20
 
-// TAD (Pilha Estatica)
 typedef struct {
-  // vetor (int)
   int vetor[TAMANHO_PILHA];
-  // topo (int) - indexador (guarda o indice de posicoes do vetor)
   int topo;
 } PilhaEstatica;
-
-//-----------------------
-// Operações
-//-----------------------
 
 void inicializarPilhaEstatica(PilhaEstatica *p) { 
   p->topo = 0;
@@ -34,7 +27,7 @@ int tamanhoPilhaEstatica(PilhaEstatica *p) {
 }
 
 void imprimirPilhaEstatica(PilhaEstatica *p) {
-  printf("Pilha = [");
+  printf("Pilha = [ ");
 
   for(int i = 0; i < p->topo; i++) {
     printf("%d ", p->vetor[i]);
@@ -43,52 +36,37 @@ void imprimirPilhaEstatica(PilhaEstatica *p) {
   printf("]\n");
 }
 
-// * insercao (empilha/push)
 void empilharPilhaEstatica(PilhaEstatica *pilha, int x) {
-// se a pilha estiver cheia:
   if(estaCheiaPilhaEstatica(pilha)) {
      printf("Warning: pilha cheia!\n");
 
      return;
   }
 
-  // se a pilha nao estiver cheia:
-
-  // add o numero (x) na posicao indexada pelo topo
   pilha->vetor[pilha->topo] = x;
- 
-  //     incrementa o valor do topo
   pilha->topo++;
 }
 
-// consulta (topo)
+
 int topoPilhaEstatica(PilhaEstatica *pilha) {
   int ret = pilha->vetor[pilha->topo-1];
  
   return(ret);
 }
 
-// remocao (desempilha/pop)
-int desempilharPilhaEstatica(PilhaEstatica *pilha) {
 
-  // se a pilha esta vazia:
+int desempilharPilhaEstatica(PilhaEstatica *pilha) {
   if(estaVaziaPilhaEstatica(pilha)){
     printf("Warning: pilha está vazia!\n");
   } else {
-    // se a pilha nao esta vazia:
-
-    // copiar o valor do vetor[topo] em um aux
     int ret = topoPilhaEstatica(pilha);
     
-    // topo decrementado retornar uma posicao
     pilha->topo--;
     
-    // retorna o elemento aux
     return ret;
   }
 }
 
-// conversao para números binários
 void convertToBinary(int num, char* result) {
     char binario[32];
 
@@ -139,7 +117,6 @@ int main(int argc, const char * argv[]) {
 
     exit(10);
   }
-
 
   //abre os arquivos de acordo como os parâmetros fornecidos
   FILE *arquivo_entrada = fopen(argv[1], "r");
@@ -197,4 +174,3 @@ int main(int argc, const char * argv[]) {
   
   return 0;
 }
-  
