@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <string.h>
 
 #define TAMANHO_PILHA 20
 
@@ -87,6 +88,49 @@ int desempilharPilhaEstatica(PilhaEstatica *pilha) {
   }
 }
 
+// conversao para números binários
+void convertToBinary(int num, char* result) {
+    char binario[32];
+
+    // se o número for 0, não é necessário realizar toda a conversão
+    if (num == 0) {
+      strcpy(result, "0");
+      
+      return;
+    }
+
+    int i = 0;
+    while (num > 0) {
+      /*
+        ex: num = 10. 
+        binario[0] = 0
+        num = 10 / 2 = 5;
+        num = 5. 
+        binario[1] = 1
+        num = 5 / 2 = 2;
+        num = 2. 
+        binario[2] = 0
+        num = 2 / 2 = 1;
+        num = 1;
+        binario[3] = 1;
+        resultado = 1010
+        Basicamente usamos esse código para fazer divisões sucessivas por 2 e achar o valor binário correspondente ao decimal.
+      */
+      binario[i++] = num % 2 == 1 ? '1' : '0';
+      num = num / 2; 
+    }
+
+    // aqui é passado o resultado da conversao pro vetor que chega como parâmetro da função
+    int j;
+    for (j = 0; j < i; j++) {
+      // o resultado é copiado de trás pra frente (i - j - 1)
+      // já que o método de divisões sucessivas produz resultados invertidos
+      result[j] = binario[i - j - 1];
+    }
+
+    result[j] = '\0';
+}
+
 int main(int argc, const char * argv[]) {
 
 // verifica se o usuário passou o número correto de parâmetros
@@ -121,10 +165,9 @@ int main(int argc, const char * argv[]) {
   // leitura de cada linha do arquivo
   while ((retorno = fscanf(arquivo_entrada, "%d", &numero)) != EOF)
   {
-
     // verificação de valores inválidos na leitura
     if (retorno != 1) {
-      fprintf(arquivo_saida, "Arquivo invalido!");
+      fprintf(arquivo_saida, "Arquivo inválido!\n");
       exit(11);
     }
 
@@ -137,49 +180,17 @@ int main(int argc, const char * argv[]) {
 
   // se a pilha estiver vazia no final da operação, o arquivo estava vazio. Esse é o tratamento 
   if (tamPilha == 0) {
-    fprintf(arquivo_saida, "Arquivo invalido!");
+    fprintf(arquivo_saida, "Arquivo inválido!\n");
     exit(10);
   }
 
   for (int i = 0; i < tamPilha; i++) {
     int num = desempilharPilhaEstatica(&pilha);
 
-    if (num == 0) {
-      fprintf(arquivo_saida, "%d", 0);
-      
-      continue;
-    }
-    
-
-    //conversao para números binários
-    int binario[10];
-    int index = 0;
-
-    while (num > 0) {
-      /*ex: num = 10. 
-      binario[0] = 0
-      num = 10 / 2 = 5;
-      num = 5. 
-      binario[1] = 1
-      num = 5 / 2 = 2;
-      num = 2. 
-      binario[2] = 0
-      num = 2 / 2 = 1;
-      num = 1;
-      binario[3] = 1;
-      resultado = 1010
-      Basicamente usamos esse código para fazer divisões sucessivas por 2 e achar o valor binário correspondente ao decimal.*/
-      binario[index++] = num % 2;
-      
-      num = num / 2; 
-    }
-
-    for (int i = index - 1; i >= 0; i--) {	
-	  // imprimir o numero que representa o binario, necessário imprimir de trás para frente. 
-      fprintf(arquivo_saida, "%d", binario[i]);
-    }
+    char binaryResult[32];
+    convertToBinary(num, binaryResult);
   
-    fprintf(arquivo_saida, "\n");
+    fprintf(arquivo_saida, "%s\n", binaryResult);
   }
 
   fclose(arquivo_saida);
