@@ -7,8 +7,6 @@ Luis Henrique*/
 #include <stdlib.h>
 #include <stdbool.h> //0/1 false/true
 
-#define capacidade 7 // Limite máximo de aviões na fila.
-
 typedef struct Aviao
 {
   int id;
@@ -34,6 +32,7 @@ typedef struct Pista
 {
   int pista_esta_disponivel; // 1 se a pista está disponível, 0 caso contrário
   int semaforo;              // 0 - Decolagem; 1 - Aterrisagem fila 1; 2 - Aterrisagem pista 2
+  int possuiAterrisagem;     // 1 sim, 0 nao
   Fila *filaDecolagem;
   Fila *filasAterrisagem[2];
 } Pista;
@@ -48,9 +47,7 @@ Aviao *criarAviao(int id, int comb)
   Aviao *aviao = malloc(sizeof(Aviao));
 
   aviao->id = id;
-
-  if (comb != -1)
-    aviao->combustivel = comb;
+  aviao->combustivel = comb;
 
   return aviao;
 }
@@ -141,30 +138,37 @@ PtrNoFila navegarFila(PtrNoFila no)
 
 Aeroporto *inicializarAeroporto()
 {
-  Aeroporto *aeroporto = malloc(sizeof(Aeroporto));
+  Aeroporto *aeroporto = (Aeroporto *)malloc(sizeof(Aeroporto));
 
   // Criar e alocar as pistas
   for (int i = 1; i <= 3; i++)
   {
-    Pista *pista = malloc(sizeof(Pista));
+    Pista *pista = (Pista *)malloc(sizeof(Pista));
     pista->pista_esta_disponivel = 1;
     pista->semaforo = 0;
 
     // Cria fila de decolagem
-    Fila *decolagem = malloc(sizeof(Fila));
+    Fila *decolagem = (Fila *)malloc(sizeof(Fila));
+    inicializarFila(decolagem);
     pista->filaDecolagem = decolagem;
+
+    pista->possuiAterrisagem = 0;
 
     // Criar filas de pouso
     if (i != 3)
     {
-      Fila *filaPouso1 = malloc(sizeof(Fila));
-      Fila *filaPouso2 = malloc(sizeof(Fila));
+      Fila *filaPouso1 = (Fila *)malloc(sizeof(Fila));
+      inicializarFila(filaPouso1);
+      Fila *filaPouso2 = (Fila *)malloc(sizeof(Fila));
+      inicializarFila(filaPouso2);
 
       pista->filasAterrisagem[0] = filaPouso1;
       pista->filasAterrisagem[1] = filaPouso2;
+
+      pista->possuiAterrisagem = 1;
     }
 
-    aeroporto->pistas[i] = pista;
+    aeroporto->pistas[i - 1] = pista;
   }
 
   return aeroporto;
@@ -179,7 +183,14 @@ void imprimirFila(Fila *f)
     int id = aviao->id;
     int combustivel = aviao->combustivel;
 
-    printf("(ID: %d - combustivel: %d) ", id, combustivel);
+    printf("(ID: %d", id);
+
+    if (combustivel != -1)
+    {
+      printf(" - combustivel: %d", combustivel);
+    }
+
+    printf(") ");
   }
 }
 
@@ -190,18 +201,18 @@ void imprimirPista(Pista *pista)
 
   printf("Fila de decolagem: ");
   imprimirFila(decolagem);
-  printf("/n");
+  printf("\n");
 
   if (aterrisagem[0] == NULL)
     return;
 
   printf("Fila de aterrisagem 1: ");
   imprimirFila(aterrisagem[0]);
-  printf("/n");
+  printf("\n");
 
   printf("Fila de aterrisagem 2: ");
   imprimirFila(aterrisagem[1]);
-  printf("/n");
+  printf("\n");
 }
 
 void imprimirAeroporto(Aeroporto *aeroporto)
@@ -212,7 +223,7 @@ void imprimirAeroporto(Aeroporto *aeroporto)
   {
     Pista *pista = pistas[i];
 
-    printf("Pista %d:\n", i);
+    printf("Pista %d:\n", i + 1);
     imprimirPista(pista);
 
     printf("\n");
@@ -226,23 +237,23 @@ int totalSemCombustivel = 0;
 
 void imprimirEstatiscas()
 {
+
+  printf("total %d\n", totalAterrissagens);
+
+  float mediaDecolagens = totalDecolagens > 0 ? (float)totalTempo / totalDecolagens : 0;
+  float mediaAterrissagens = totalAterrissagens > 0 ? (float)totalTempo / totalAterrissagens : 0;
+
   printf("Estatisticas:\n");
-  printf("Tempo medio para decolagem: %f\n", (float)totalTempo / totalDecolagens);
-  printf("Tempo medio para aterrissagem: %f\n", (float)totalTempo / totalAterrissagens);
-  printf("Avioes que pousaram praticamente sem combustivel: %d\n", totalSemCombustivel);
+  printf("Tempo medio para decolagem: %f\n", mediaDecolagens);
+  printf("Tempo medio para aterrissagem: %f\n", mediaAterrissagens);
+  printf("Avioes que pousaram praticamente sem combustivel: %d\n\n", totalSemCombustivel);
 }
 
 void reduzirCombustivel(Pista *pista)
 {
   // Retirar combustivel dos aviões restantes da fila
-  Fila *filaDecolagem = pista->filaDecolagem;
   Fila *filaAterrisagem1 = pista->filasAterrisagem[0];
   Fila *filaAterrisagem2 = pista->filasAterrisagem[1];
-
-  for (PtrNoFila i = filaDecolagem->inicio; i != NULL; i = navegarFila(i))
-  {
-    i->aviao->combustivel--;
-  }
 
   for (PtrNoFila i = filaAterrisagem1->inicio; i != NULL; i = navegarFila(i))
   {
@@ -265,30 +276,44 @@ void processarDecolagensAterrisagens(Pista *pista)
     return;
   }
 
-  int semaforo = pista->semaforo;
   Fila *fila;
 
-  if (semaforo == 0)
+  if (pista->possuiAterrisagem == 0)
   {
     fila = pista->filaDecolagem;
+    totalDecolagens++;
   }
-  else if (semaforo == 1)
+  else
   {
-    fila = pista->filasAterrisagem[0];
-  }
-  else if (semaforo == 2)
-  {
-    fila = pista->filasAterrisagem[1];
+    int semaforo = pista->semaforo;
+
+    if (semaforo == 0)
+    {
+      fila = pista->filaDecolagem;
+      totalDecolagens++;
+    }
+    else if (semaforo == 1)
+    {
+      fila = pista->filasAterrisagem[0];
+      totalAterrissagens++;
+    }
+    else if (semaforo == 2)
+    {
+      fila = pista->filasAterrisagem[1];
+      totalAterrissagens++;
+    }
+
+    semaforo++;
+
+    if (semaforo > 2)
+    {
+      semaforo = 0;
+    }
+
+    pista->semaforo = semaforo;
   }
 
   removerFilaDinamica(fila);
-
-  semaforo++;
-
-  if (semaforo > 2)
-  {
-    semaforo = 0;
-  }
 }
 
 void verificarPousoDeEmergencia(Aeroporto *aeroporto)
@@ -300,9 +325,9 @@ void verificarPousoDeEmergencia(Aeroporto *aeroporto)
     Fila *filaAterrisagem2 = pista->filasAterrisagem[1];
 
     PtrNoFila noAnterior = NULL;
-    for (PtrNoFila i = filaAterrisagem1->inicio; i != NULL; i = navegarFila(i))
+    for (PtrNoFila j = filaAterrisagem1->inicio; j != NULL; j = navegarFila(j))
     {
-      if (i->aviao->combustivel == 0)
+      if (j->aviao->combustivel == 0)
       {
 
         if (aeroporto->pistas[2]->pista_esta_disponivel == 1)
@@ -319,11 +344,11 @@ void verificarPousoDeEmergencia(Aeroporto *aeroporto)
         }
         else
         {
-          printf("O avião %d caiu por falta de combustível", i->aviao->id);
+          printf("O avião %d caiu por falta de combustível", j->aviao->id);
         }
 
         // logica da Fila
-        PtrNoFila proximoNo = i->proximo;
+        PtrNoFila proximoNo = j->proximo;
 
         if (noAnterior == NULL)
         {
@@ -335,10 +360,10 @@ void verificarPousoDeEmergencia(Aeroporto *aeroporto)
         }
       }
 
-      noAnterior = i;
+      noAnterior = j;
     }
 
-    for (PtrNoFila i = filaAterrisagem2->inicio; i != NULL; i = navegarFila(i))
+    for (PtrNoFila j = filaAterrisagem2->inicio; j != NULL; j = navegarFila(j))
     {
 
       if (aeroporto->pistas[2]->pista_esta_disponivel == 1)
@@ -355,11 +380,11 @@ void verificarPousoDeEmergencia(Aeroporto *aeroporto)
       }
       else
       {
-        printf("O avião %d caiu por falta de combustível", i->aviao->id);
+        printf("O avião %d caiu por falta de combustível", j->aviao->id);
       }
 
       // logica da Fila
-      PtrNoFila proximoNo = i->proximo;
+      PtrNoFila proximoNo = j->proximo;
 
       if (noAnterior == NULL)
       {
@@ -369,71 +394,114 @@ void verificarPousoDeEmergencia(Aeroporto *aeroporto)
       {
         noAnterior->proximo = proximoNo;
       }
-    }
 
-    noAnterior = i;
+      noAnterior = j;
+    }
   }
 }
 
-void processarTempo(Aeroporto *aeroporto, int avioesDecolagem, int avioesAterrisagem, int *combustivel)
+bool possuiAvioesNasFilas(Aeroporto *aeroporto)
+{
+
+  bool retorno = false;
+  for (int i = 0; i < 3; i++)
+  {
+    Pista *pista = aeroporto->pistas[i];
+
+    Fila *filaDecolagem = pista->filaDecolagem;
+
+    if (tamanhoFilaDinamica(filaDecolagem) > 0)
+    {
+      retorno = true;
+      break;
+    }
+
+    if (pista->possuiAterrisagem)
+    {
+      Fila *filaAterrissagem1 = pista->filasAterrisagem[0];
+
+      if (tamanhoFilaDinamica(filaAterrissagem1) > 0)
+      {
+        retorno = true;
+        break;
+      }
+
+      Fila *filaAterrissagem2 = pista->filasAterrisagem[1];
+
+      if (tamanhoFilaDinamica(filaAterrissagem2) > 0)
+      {
+        retorno = true;
+        break;
+      }
+    }
+  }
+
+  return retorno;
+}
+
+int idDecolagem = 1;
+int idAterrisagem = 1;
+void processarTempo(Aeroporto *aeroporto, int avioesDecolagem, int avioesAterrisagem, int combustivel[3])
 {
   // Avioes chegam
 
-  int idDecolagem = 1;
-  for (int i = 0; i < avioesDecolagem; i++)
+  if (avioesDecolagem > 0)
   {
-    Aviao *aviao = criarAviao(idDecolagem++ * 2, -1);
-
-    int menor = -1;
-    int pista = -1;
-    for (int j = 0; j < 3; j++)
+    for (int i = 0; i < avioesDecolagem; i++)
     {
-      Pista *pista = aeroporto->pistas[j];
-      Fila *fila = pista->filaDecolagem;
+      Aviao *aviao = criarAviao(idDecolagem++ * 2, -1);
 
-      int tamanho = tamanhoFilaDinamica(fila);
+      int menor = -1;
+      int numPista = -1;
 
-      if (pista == -1 || tamanho < menor)
+      for (int j = 0; j < 3; j++)
       {
-        menor = tamanho;
-        pista = j;
-      }
-    }
+        Pista *pista = aeroporto->pistas[j];
+        Fila *fila = pista->filaDecolagem;
 
-    Fila *filaAdicao = aeroporto->pistas[pista]->filaDecolagem;
-
-    adicionarAviao(filaAdicao, aviao);
-  }
-
-  int idAterrisagem = 1;
-  for (int i = 0; i < avioesAterrisagem; i++)
-  {
-    Aviao *aviao = criarAviao((idAterrisagem++ * 2) - 1, combustivel[i]);
-
-    int menor = -1;
-    int pista = -1;
-    int fila = -1;
-
-    for (int j = 0; j < 3; j++)
-    {
-      Pista *pista = aeroporto->pistas[j];
-
-      for (int k = 0; k < 2; k++)
-      {
-        Fila *fila = pista->filasAterrisagem[k];
         int tamanho = tamanhoFilaDinamica(fila);
 
-        if (pista == -1 || tamanho < menor)
+        if (numPista == -1 || tamanho < menor)
         {
           menor = tamanho;
-          pista = j;
-          fila = k;
+          numPista = j;
         }
       }
-    }
 
-    Fila *filaAdicao = aeroporto->pistas[pista]->filasAterrisagem[fila];
-    adicionarAviao(filaAdicao, aviao);
+      Fila *filaAdicao = aeroporto->pistas[numPista]->filaDecolagem;
+
+      adicionarAviao(filaAdicao, aviao);
+    }
+  }
+
+  if (avioesAterrisagem > 0)
+  {
+    for (int i = 0; i < avioesAterrisagem; i++)
+    {
+      Aviao *aviao = criarAviao((idAterrisagem++ * 2) - 1, combustivel[i]);
+
+      int menor = -1;
+      int numPista = -1;
+
+      int numFila = combustivel[i] < 10 ? 0 : 1;
+      for (int j = 0; j < 2; j++)
+      {
+        Pista *pista = aeroporto->pistas[j];
+        Fila *fila = pista->filasAterrisagem[numFila];
+
+        int tamanho = tamanhoFilaDinamica(fila);
+
+        if (numPista == -1 || tamanho < menor)
+        {
+          menor = tamanho;
+          numPista = j;
+        }
+      }
+
+      Fila *filaAdicao = aeroporto->pistas[numPista]->filasAterrisagem[numFila];
+
+      adicionarAviao(filaAdicao, aviao);
+    }
   }
 
   // POUSO EMERGENCIA
@@ -446,52 +514,67 @@ void processarTempo(Aeroporto *aeroporto, int avioesDecolagem, int avioesAterris
   {
     Pista *pista = aeroporto->pistas[i];
     processarDecolagensAterrisagens(pista);
+
+    if (i == 2)
+      continue;
+
+    reduzirCombustivel(pista);
   }
 
+  // combustível cai com o passar do tempo
+
+  totalTempo++;
   imprimirAeroporto(aeroporto);
   imprimirEstatiscas();
+
+  // return possuiAvioesNasFilas(aeroporto);
 }
 
-int main(int argc, const char *argv[])
+int main(int argc, char *argv[])
 {
-  // verifica se o usuário passou o número correto de parâmetros
-  if (argc < 2)
-  {
-    printf("Voce nao passou o numero certo de parametros!");
+  FILE *file;
 
-    exit(10);
+  // verifica se o usuário passou o número correto de parâmetros
+  if (argc != 2)
+  {
+    printf("Voce nao passou o numero certo de parametros!\n");
+
+    return 10;
   }
 
   // abre os arquivos de acordo como os parâmetros fornecidos
-  FILE *arquivo_entrada = fopen(argv[1], "r");
+  file = fopen(argv[1], "r");
 
-  if (arquivo_entrada == NULL)
+  if (file == NULL)
   {
-    printf("Erro ao abrir o arquivo!");
+    printf("Erro ao abrir o arquivo!\n");
     exit(1);
   }
+
+  Aeroporto *aeroporto = inicializarAeroporto();
+
+  int retornoFile = 0;
 
   int numDecolagem = 0;
   int numAterrisagem = 0;
   int combAterrisagem[3];
 
-  Aeroporto *aeroporto = inicializarAeroporto();
-  
-  // imprimirAeroporto(aeroporto);
-  int numero = 2;
-
-  int retorno = 0; 
   while (true)
   {
-    // retorno = fscanf(arquivo_entrada, "%d; %d %d %d %d", &numDecolagem, &numAterrisagem, &combAterrisagem[0], &combAterrisagem[1], &combAterrisagem[2]);
-    printf("%s", argv[1]);
-    fscanf(arquivo_entrada, "%d", &numero);
-    printf("vsf %d", numDecolagem);
 
-    if (retorno == EOF)
+    retornoFile = fscanf(file, "%d; %d %d %d %d", &numDecolagem, &numAterrisagem, &combAterrisagem[0], &combAterrisagem[1], &combAterrisagem[2]);
+
+    if (retornoFile == EOF)
+    {
       break;
+    }
 
     processarTempo(aeroporto, numDecolagem, numAterrisagem, combAterrisagem);
+
+    if (retornoFile == EOF)
+    {
+      break;
+    }
   }
 
   return 0;
