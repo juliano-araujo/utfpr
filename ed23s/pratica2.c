@@ -35,7 +35,7 @@ typedef struct Pista
   int pista_esta_disponivel; // 1 se a pista está disponível, 0 caso contrário
   int semaforo;              // 0 - Decolagem; 1 - Aterrisagem fila 1; 2 - Aterrisagem pista 2
   Fila *filaDecolagem;
-  Fila *filasAterrisagem[2]
+  Fila *filasAterrisagem[2];
 } Pista;
 
 typedef struct Aeroporto
@@ -134,7 +134,7 @@ Aviao *removerFilaDinamica(Fila *f)
   }
 }
 
-PtrNoFila *navegarFila(PtrNoFila no)
+PtrNoFila navegarFila(PtrNoFila no)
 {
   return no->proximo;
 }
@@ -408,92 +408,93 @@ void processarTempo(Aeroporto *aeroporto, int avioesDecolagem, int avioesAterris
   int idAterrisagem = 1;
   for (int i = 0; i < avioesAterrisagem; i++)
   {
-    Aviao *aviao = criarAviao(idAterrisagem++ * 2 - 1, combustivel[i]);
+    Aviao *aviao = criarAviao((idAterrisagem++ * 2) - 1, combustivel[i]);
 
-    int idDecolagem = 1;
-    for (int i = 0; i < avioesDecolagem; i++)
+    int menor = -1;
+    int pista = -1;
+    int fila = -1;
+
+    for (int j = 0; j < 3; j++)
     {
-      Aviao *aviao = criarAviao(idDecolagem++ * 2, -1);
+      Pista *pista = aeroporto->pistas[j];
 
-      int menor = -1;
-      int pista = -1;
-      int fila = -1;
-
-      for (int j = 0; j < 3; j++)
+      for (int k = 0; k < 2; k++)
       {
-        Pista *pista = aeroporto->pistas[j];
+        Fila *fila = pista->filasAterrisagem[k];
+        int tamanho = tamanhoFilaDinamica(fila);
 
-        for (int k = 0; k < 2; k++)
+        if (pista == -1 || tamanho < menor)
         {
-          Fila *fila = pista->filasAterrisagem[k];
-          int tamanho = tamanhoFilaDinamica(fila);
-
-          if (pista == -1 || tamanho < menor)
-          {
-            menor = tamanho;
-            pista = j;
-            fila = k;
-          }
+          menor = tamanho;
+          pista = j;
+          fila = k;
         }
       }
-
-      Fila *filaAdicao = aeroporto->pistas[pista]->filasAterrisagem[fila];
-      adicionarAviao(filaAdicao, aviao);
-    }
-  }
-
-    // POUSO EMERGENCIA
-
-    verificarPousoDeEmergencia(aeroporto);
-
-    // PROCESSAR AS PISTAS
-
-    for (int i = 0; i < 3; i++)
-    {
-      Pista *pista = aeroporto->pistas[i];
-      processarDecolagensAterrisagens(pista);
     }
 
-    imprimirAeroporto(aeroporto);
-    imprimirEstatiscas();
+    Fila *filaAdicao = aeroporto->pistas[pista]->filasAterrisagem[fila];
+    adicionarAviao(filaAdicao, aviao);
   }
 
-int main(int argc, const char * argv[]) {
+  // POUSO EMERGENCIA
 
-// verifica se o usuário passou o número correto de parâmetros
-  if (argc != 2) {
+  verificarPousoDeEmergencia(aeroporto);
+
+  // PROCESSAR AS PISTAS
+
+  for (int i = 0; i < 3; i++)
+  {
+    Pista *pista = aeroporto->pistas[i];
+    processarDecolagensAterrisagens(pista);
+  }
+
+  imprimirAeroporto(aeroporto);
+  imprimirEstatiscas();
+}
+
+int main(int argc, const char *argv[])
+{
+  // verifica se o usuário passou o número correto de parâmetros
+  if (argc < 2)
+  {
     printf("Voce nao passou o numero certo de parametros!");
 
     exit(10);
   }
 
-    // abre os arquivos de acordo como os parâmetros fornecidos
-    FILE *arquivo_entrada = fopen(argv[1], "r");
+  // abre os arquivos de acordo como os parâmetros fornecidos
+  FILE *arquivo_entrada = fopen(argv[1], "r");
 
-    if (arquivo_entrada == NULL)
-    {
-      printf("Erro ao abrir o arquivo!");
-      exit(1);
-    }
-
-    int retorno;
-    int numDecolagem = 0;
-    int numAterrisagem = 0;
-    int combAterrisagem[3];
-
-    Aeroporto *aeroporto = inicializarAeroporto();
-
-    while (true)
-    {
-      retorno = fscanf(arquivo_entrada, "%d; %d %d %d %d", &numDecolagem, &numAterrisagem, &combAterrisagem[0], &combAterrisagem[1], &combAterrisagem[2]);
-
-      if (retorno == EOF)
-        break;
-
-      processarTempo(aeroporto, numDecolagem, numAterrisagem, combAterrisagem);
-    }
-
-    return 0;
+  if (arquivo_entrada == NULL)
+  {
+    printf("Erro ao abrir o arquivo!");
+    exit(1);
   }
 
-  /*Complexidade do problema: O(n^4) */
+  int numDecolagem = 0;
+  int numAterrisagem = 0;
+  int combAterrisagem[3];
+
+  Aeroporto *aeroporto = inicializarAeroporto();
+  
+  // imprimirAeroporto(aeroporto);
+  int numero = 2;
+
+  int retorno = 0; 
+  while (true)
+  {
+    // retorno = fscanf(arquivo_entrada, "%d; %d %d %d %d", &numDecolagem, &numAterrisagem, &combAterrisagem[0], &combAterrisagem[1], &combAterrisagem[2]);
+    printf("%s", argv[1]);
+    fscanf(arquivo_entrada, "%d", &numero);
+    printf("vsf %d", numDecolagem);
+
+    if (retorno == EOF)
+      break;
+
+    processarTempo(aeroporto, numDecolagem, numAterrisagem, combAterrisagem);
+  }
+
+  return 0;
+}
+
+/*Complexidade do problema: O(n^4) */
